@@ -24,7 +24,7 @@ bool first;
 uint8_t flags = 0;
 uint16_t tflags = 0;
 
-uint32_t starttime;
+uint64_t starttime;
 
 void invertrect(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
 {
@@ -259,7 +259,7 @@ start:
             drawnum(GRID_BOMBS, 4 * 10, 64 - 6 * 2, 1);
 
             drawstring("Time: ", 0, 64 - 6, 1);
-            drawnum((gettime64() - starttime) / 1000, 4 * 6, 64 - 6, 1);
+            drawnum((gettime() - starttime) / 1000, 4 * 6, 64 - 6, 1);
         }
 
         refreshscreen();
