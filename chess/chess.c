@@ -568,6 +568,36 @@ void updateGameState()
     }
 }
 
+const uint8_t *spriteOf(uint8_t p)
+{
+    switch (p)
+    {
+    case BPAWN:
+        return bpawn_bmp;
+    case WPAWN:
+        return wpawn_bmp;
+    case BKNIGHT:
+        return bknight_bmp;
+    case WKNIGHT:
+        return wknight_bmp;
+    case BBISHOP:
+        return bbishop_bmp;
+    case WBISHOP:
+        return wbishop_bmp;
+    case BROOK:
+        return brook_bmp;
+    case WROOK:
+        return wrook_bmp;
+    case BQUEEN:
+        return bqueen_bmp;
+    case WQUEEN:
+        return wqueen_bmp;
+    case BKING:
+        return bking_bmp;
+    }
+    return wking_bmp;
+}
+
 #define FONT_H 6
 #define FONT_W 4
 
@@ -680,48 +710,10 @@ start:
         {
             for (uint8_t i = 0; i < GRID_W; i++)
             {
-                switch (board[j][i])
-                {
-                case EMPTY:
+                if (board[j][i] == EMPTY)
                     fillrect(i * GRID_SIZE, j * GRID_SIZE, GRID_SIZE, GRID_SIZE, i % 2 == j % 2);
-                    break;
-                case BPAWN:
-                    bmp(i * GRID_SIZE, j * GRID_SIZE, 8, 8, bpawn_bmp);
-                    break;
-                case WPAWN:
-                    bmp(i * GRID_SIZE, j * GRID_SIZE, 8, 8, wpawn_bmp);
-                    break;
-                case BKNIGHT:
-                    bmp(i * GRID_SIZE, j * GRID_SIZE, 8, 8, bknight_bmp);
-                    break;
-                case WKNIGHT:
-                    bmp(i * GRID_SIZE, j * GRID_SIZE, 8, 8, wknight_bmp);
-                    break;
-                case BBISHOP:
-                    bmp(i * GRID_SIZE, j * GRID_SIZE, 8, 8, bbishop_bmp);
-                    break;
-                case WBISHOP:
-                    bmp(i * GRID_SIZE, j * GRID_SIZE, 8, 8, wbishop_bmp);
-                    break;
-                case BROOK:
-                    bmp(i * GRID_SIZE, j * GRID_SIZE, 8, 8, brook_bmp);
-                    break;
-                case WROOK:
-                    bmp(i * GRID_SIZE, j * GRID_SIZE, 8, 8, wrook_bmp);
-                    break;
-                case BQUEEN:
-                    bmp(i * GRID_SIZE, j * GRID_SIZE, 8, 8, bqueen_bmp);
-                    break;
-                case WQUEEN:
-                    bmp(i * GRID_SIZE, j * GRID_SIZE, 8, 8, wqueen_bmp);
-                    break;
-                case BKING:
-                    bmp(i * GRID_SIZE, j * GRID_SIZE, 8, 8, bking_bmp);
-                    break;
-                case WKING:
-                    bmp(i * GRID_SIZE, j * GRID_SIZE, 8, 8, wking_bmp);
-                    break;
-                }
+                else
+                    bmp(i * GRID_SIZE, j * GRID_SIZE, 8, 8, spriteOf(board[j][i]));
 
                 if (selectx == i && selecty == j && gettime() % 1000 < 500)
                 {
@@ -738,46 +730,36 @@ start:
                     bmpxor(i * GRID_SIZE, j * GRID_SIZE, 8, 8, legal_bmp);
                 }
 
-                if (inCheck)
-                {
-                    uint8_t king = turn ? BKING : WKING;
+            }
+        }
 
-                    for (uint8_t y = 0; y < 8; y++)
-                    {
-                        for (uint8_t x = 0; x < 8; x++)
-                        {
-                            if (board[y][x] == king && gettime() % 500 < 250)
-                                bmpxor(x * 8, y * 8, 8, 8, check_bmp);
-                        }
-                    }
-                }
+        if (inCheck && gettime() % 500 < 250)
+        {
+            uint8_t king = turn ? BKING : WKING;
 
-                if (gameOver)
-                {
-                    if (checkmate)
-                    {
-                        if (turn == 0)
-                        {
-                            fillrect(cx(11) - 1, 64 / 2 - FONT_H - 1, FONT_W * 11 + 1, FONT_H * 3 + 1, 0);
-                            drawstring("Checkmate!", cx(10), 64 / 2 - FONT_H, 1);
-                            drawstring("Black wins!", cx(11), 64 / 2, 1);
-                            drawstring("Press START", cx(11), 64 / 2 + FONT_H, 1);
-                        }
-                        else
-                        {
-                            fillrect(cx(11) - 1, 64 / 2 - FONT_H - 1, FONT_W * 11 + 1, FONT_H * 3 + 1, 0);
-                            drawstring("Checkmate!", cx(10), 64 / 2 - FONT_H, 1);
-                            drawstring("White wins!", cx(11), 64 / 2, 1);
-                            drawstring("Press START", cx(11), 64 / 2 + FONT_H, 1);
-                        }
-                    }
-                    else if (stalemate)
-                    {
-                        fillrect(cx(11) - 1, 64 / 2 - FONT_H - 1, FONT_W * 11 + 1, FONT_H * 2 + 1, 0);
-                        drawstring("Stalemate!", cx(10), 64 / 2 - FONT_H, 1);
-                        drawstring("Press START", cx(11), 64 / 2, 1);
-                    }
-                }
+            for (uint8_t y = 0; y < 8; y++)
+                for (uint8_t x = 0; x < 8; x++)
+                    if (board[y][x] == king)
+                        bmpxor(x * 8, y * 8, 8, 8, check_bmp);
+        }
+
+        if (gameOver)
+        {
+            if (checkmate)
+            {
+                fillrect(cx(11) - 1, 64 / 2 - FONT_H - 1, FONT_W * 11 + 1, FONT_H * 3 + 1, 0);
+                drawstring("Checkmate!", cx(10), 64 / 2 - FONT_H, 1);
+                if (turn == 0)
+                    drawstring("Black wins!", cx(11), 64 / 2, 1);
+                else
+                    drawstring("White wins!", cx(11), 64 / 2, 1);
+                drawstring("Press START", cx(11), 64 / 2 + FONT_H, 1);
+            }
+            else if (stalemate)
+            {
+                fillrect(cx(11) - 1, 64 / 2 - FONT_H - 1, FONT_W * 11 + 1, FONT_H * 2 + 1, 0);
+                drawstring("Stalemate!", cx(10), 64 / 2 - FONT_H, 1);
+                drawstring("Press START", cx(11), 64 / 2, 1);
             }
         }
 
