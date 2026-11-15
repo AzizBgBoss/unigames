@@ -123,7 +123,7 @@ void explode(uint8_t x, uint8_t y)
 uint8_t main()
 {
     srand(gettime());
-    printf("geemu\n");
+    printf("minesweeper\n");
 
     if (isflagsupported(FLAG_GRAPHICS,
                         GFX_MONO_64X64))
@@ -259,7 +259,7 @@ start:
             drawnum(GRID_BOMBS, 4 * 10, 64 - 6 * 2, 1);
 
             drawstring("Time: ", 0, 64 - 6, 1);
-            drawnum((gettime64() - starttime) / 1000, 4 * 6, 64 - 6, 1);
+            drawnum((gettime() - starttime) / 1000, 4 * 6, 64 - 6, 1);
         }
 
         refreshscreen();
