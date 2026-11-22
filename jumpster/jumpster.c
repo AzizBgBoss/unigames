@@ -29,20 +29,7 @@ uint16_t offset_y;
 
 void bmp(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t *data)
 {
-    for (uint8_t i = 0; i < h; i++)
-    {
-        for (uint8_t j = 0; j < w / 8; j++)
-        {
-            uint8_t byte = data[i * (w / 8) + j];
-            for (uint8_t k = 0; k < 8; k++)
-            {
-                if (byte & (1 << (7 - k)))
-                {
-                    setpixel(x + j * 8 + k, y + i, 1);
-                }
-            }
-        }
-    }
+    blit(x, y, w, h, data, 0, 0, w, BLIT_1BPP | BLIT_TRANSPARENT | BLIT_RAM, 0, 0);
 }
 
 int clamp(int v, int min, int max)

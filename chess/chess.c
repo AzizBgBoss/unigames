@@ -74,22 +74,7 @@ bool stalemate = false;
 
 void bmp(uint8_t x, uint8_t y, uint8_t w, uint8_t h, const uint8_t *data)
 {
-    for (uint8_t j = 0; j < h; j++)
-    {
-        uint8_t row_byte = romread(data + j, 1);
-        for (uint8_t i = 0; i < w; i++)
-        {
-            if (x + i < 64 && y + j < 64)
-            {
-                uint8_t bit = (row_byte >> (7 - i)) & 1;
-
-                if (bit)
-                {
-                    setpixel(x + i, y + j, bit);
-                }
-            }
-        }
-    }
+    blit(x, y, w, h, data, 0, 0, w, BLIT_1BPP | BLIT_TRANSPARENT, 0, 0);
 }
 
 void bmpxor(uint8_t x, uint8_t y, uint8_t w, uint8_t h, const uint8_t *data)
