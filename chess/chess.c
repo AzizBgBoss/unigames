@@ -26,6 +26,10 @@ enum Piece
 
 #define PIECE_COLOR(piece) ((piece) >= WPAWN ? 0 : 1)
 
+void makeMove(uint8_t fx, uint8_t fy, uint8_t tx, uint8_t ty);
+void updateGameState(void);
+uint32_t cx(uint32_t n);
+
 const uint8_t initial_board[GRID_H][GRID_W] = {
     {BROOK, BKNIGHT, BBISHOP, BQUEEN, BKING, BBISHOP, BKNIGHT, BROOK},
     {BPAWN, BPAWN, BPAWN, BPAWN, BPAWN, BPAWN, BPAWN, BPAWN},
@@ -112,18 +116,6 @@ const int piece_values[13] = {
     0, -100, -320, -330, -900, -20000, -500,
     100, 320, 330, 900, 20000, 500};
 
-int evaluateBoard(uint8_t b[GRID_H][GRID_W])
-{
-    int score = 0;
-    for (int y = 0; y < 8; y++)
-        for (int x = 0; x < 8; x++)
-        {
-            uint8_t p = b[y][x];
-            if (p != EMPTY)
-                score += romread(piece_values + p, 2);
-        }
-    return score;
-}
 
 uint8_t difficulty = 3;
 
@@ -490,7 +482,7 @@ static int evaluatePosition(ChessPos *p)
             if (piece == EMPTY)
                 continue;
 
-            int value = romread(piece_values + piece, 2);
+            int value = piece_values[piece];
 
             if (piece == WPAWN)
                 value += (6 - y) * 9;
@@ -1013,6 +1005,7 @@ void makeAIMove(void)
     updateGameState();
 }
 
+#if 0 // dead board-based duplicates of the ChessPos functions above
 bool clearPath(uint8_t b[GRID_H][GRID_W],
                uint8_t fx, uint8_t fy,
                uint8_t tx, uint8_t ty)
@@ -1360,6 +1353,15 @@ bool legal(uint8_t b[GRID_H][GRID_W],
     return !kingInCheck(temp, color);
 }
 
+#endif
+
+bool kingInCheck(uint8_t b[GRID_H][GRID_W], uint8_t color)
+{
+    ChessPos p;
+    memcpy(p.b, b, 64);
+    return positionKingInCheck(&p, color);
+}
+
 void makeMove(uint8_t fx, uint8_t fy,
               uint8_t tx, uint8_t ty)
 {
@@ -1568,12 +1570,12 @@ start:
 
         if (keys & KEY_RIGHT)
         {
-            difficulty = (difficulty + 1) % 11;
+            difficulty = difficulty % 10 + 1;
         }
 
         if (keys & KEY_LEFT)
         {
-            difficulty = (difficulty + 10) % 11;
+            difficulty = (difficulty + 8) % 10 + 1;
         }
 
         drawstring("A: Play vs AI", 0, 0, 1);
