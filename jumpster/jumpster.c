@@ -92,7 +92,7 @@ start:
         if (keys & KEY_A)
             player_y_velocity = -3;
 
-        if (TILE_AT((player_x + PLAYER_HEIGHT / 2) / TILE_SIZE, (player_y + PLAYER_HEIGHT) / TILE_SIZE) != EMPTY && player_y_velocity > 0)
+        if (TILE_AT((player_x + PLAYER_HEIGHT / 2) / TILE_SIZE, (player_y + PLAYER_HEIGHT - 1 + player_y_velocity) / TILE_SIZE) != EMPTY && player_y_velocity > 0)
             player_y_velocity = 0;
 
         player_x += player_x_velocity;
@@ -105,8 +105,8 @@ start:
         
         player_y_velocity++;
 
-        offset_x = clamp(player_x + PLAYER_WIDTH / 2 - 128 / 2, 0, MAP_WIDTH * TILE_SIZE - 128 / 2);
-        offset_y = clamp(player_y + PLAYER_HEIGHT / 2 - 64 / 2, 0, MAP_HEIGHT * TILE_SIZE - 64 / 2);
+        offset_x = clamp(player_x + PLAYER_WIDTH / 2 - 128 / 2, 0, MAP_WIDTH * TILE_SIZE - 128);
+        offset_y = clamp(player_y + PLAYER_HEIGHT / 2 - 64 / 2, 0, MAP_HEIGHT * TILE_SIZE - 64);
 
         for (int x = player_x / TILE_SIZE - 128 / TILE_SIZE; x < (player_x / TILE_SIZE + 128 / TILE_SIZE); x++)
         {
@@ -126,8 +126,6 @@ start:
         bmp(player_x - offset_x, player_y - offset_y, PLAYER_WIDTH, PLAYER_HEIGHT, player_bmp + (gettime() / 100 % 4) * 16 * 2);
 
         refreshscreen();
-
-        sleep(16);
     }
 
     return 0;
