@@ -5,7 +5,16 @@ enum Tile
     GROUND,
 };
 
-unsigned char ground_bmp[TILE_SIZE * TILE_SIZE] = {
+const unsigned char tiles[] = {
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+
     0b11111111,
     0b10000001,
     0b10000001,
