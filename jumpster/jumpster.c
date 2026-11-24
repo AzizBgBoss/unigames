@@ -15,15 +15,6 @@ uint32_t last_time;
 uint32_t frame_time;
 uint32_t time_acc = 0;
 
-#define PLAYER_WIDTH 16
-#define PLAYER_HEIGHT 16
-
-// Hitbox inside the 16x16 sprite (inclusive pixel offsets)
-#define HB_X0 2
-#define HB_X1 13
-#define HB_Y0 1
-#define HB_Y1 15
-
 #define TILE_AT(x, y) (map[(y) * MAP_WIDTH + (x)])
 
 // 16.16 fixed point for positions and velocities, values are per physics step
@@ -53,9 +44,12 @@ uint8_t prev_keys = 0;
 uint16_t offset_x;
 uint16_t offset_y;
 
+int32_t camera_x = 0;
+int32_t camera_y = 0;
+
 void bmp(int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t *data, uint8_t flags)
 {
-    blit(x, y, w, h, data, 0, 0, w, BLIT_1BPP | BLIT_TRANSPARENT | BLIT_RAM | flags, 0, 0);
+    blit(x, y, w, h, data, 0, 0, w, BLIT_1BPP | BLIT_TRANSPARENT | flags, 0, 0);
 }
 
 int clamp(int v, int min, int max)
@@ -284,10 +278,24 @@ start:
         if (time_acc >= STEP_UNITS)
             time_acc = 0; // too far behind, drop the rest instead of catching up
 
-        offset_x = clamp(player_x / FP_ONE + PLAYER_WIDTH / 2 - 128 / 2 + (player_x_velocity * 20) / FP_ONE, // this doesnt look as smooth, gotta treat cam velocity seperately
-                         0, MAP_WIDTH * TILE_SIZE - 128);
-        offset_y = clamp(player_y / FP_ONE + PLAYER_HEIGHT / 2 - 64 / 2,
-                         0, MAP_HEIGHT * TILE_SIZE - 64);
+        int32_t target_x = player_x +
+                           (PLAYER_WIDTH / 2 - 64) * FP_ONE +
+                           player_x_velocity * 40;
+
+        int32_t target_y = player_y +
+                           (PLAYER_HEIGHT / 2 - 32) * FP_ONE;
+
+        int32_t max_x = (MAP_WIDTH * TILE_SIZE - 128) * FP_ONE;
+        int32_t max_y = (MAP_HEIGHT * TILE_SIZE - 64) * FP_ONE;
+
+        target_x = clamp(target_x / FP_ONE, 0, max_x / FP_ONE) * FP_ONE;
+        target_y = clamp(target_y / FP_ONE, 0, max_y / FP_ONE) * FP_ONE;
+
+        camera_x += (target_x - camera_x) / 12;
+        camera_y += (target_y - camera_y) / 5;
+
+        offset_x = camera_x / FP_ONE;
+        offset_y = camera_y / FP_ONE;
 
         tilemap(map, MAP_WIDTH, MAP_HEIGHT, tiles, 8, offset_x, offset_y, TILE_SIZE, TILE_SIZE,
                 BLIT_1BPP | BLIT_TRANSPARENT | TILEMAP_MAP_RAM, 0, 0);

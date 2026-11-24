@@ -1,4 +1,13 @@
-unsigned char player_bmp[] =  {
+#define PLAYER_WIDTH 16
+#define PLAYER_HEIGHT 16
+
+// Hitbox inside the 16x16 sprite (inclusive pixel offsets)
+#define HB_X0 2
+#define HB_X1 13
+#define HB_Y0 1
+#define HB_Y1 15
+
+const unsigned char player_bmp[] =  {
  0b00000000, 0b00000000,
  0b00000001, 0b11000000,
  0b00000010, 0b00100000,
