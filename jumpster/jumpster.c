@@ -20,7 +20,8 @@ uint32_t time_acc = 0;
 // 16.16 fixed point for positions and velocities, values are per physics step
 #define FP_ONE 65536
 #define FP_FRICTION 6554 // 0.1
-#define JUMP_VELOCITY (5 * FP_ONE)
+#define PLAYER_SPEED (1.3f * FP_ONE)
+#define JUMP_VELOCITY (3 * FP_ONE)
 #define JUMP_CUT (3 * FP_ONE) // rising speed limit once A is released
 #define MAX_FALL_SPEED (7 * FP_ONE)
 #define COYOTE_STEPS 6      // can still jump this many steps after leaving a ledge
@@ -112,12 +113,12 @@ void physics_step(uint8_t keys)
 {
     if (keys & KEY_RIGHT)
     {
-        player_x_velocity = FP_ONE;
+        player_x_velocity = PLAYER_SPEED * (keys & KEY_B ? 1.5f : 1.0f);
         player_facing_left = false;
     }
     if (keys & KEY_LEFT)
     {
-        player_x_velocity = -FP_ONE;
+        player_x_velocity = -PLAYER_SPEED * (keys & KEY_B ? 1.5f : 1.0f);
         player_facing_left = true;
     }
 
@@ -155,7 +156,7 @@ void physics_step(uint8_t keys)
         player_x_velocity = 0;
 
     // vertical move: gravity, then land on floors and bump into ceilings
-    player_y_velocity += 0.3f * FP_ONE;
+    player_y_velocity += 0.1f * FP_ONE;
     if (player_y_velocity > MAX_FALL_SPEED)
         player_y_velocity = MAX_FALL_SPEED;
 
@@ -207,6 +208,25 @@ void physics_step(uint8_t keys)
         coyote = 0;
         jump_buffer = 0;
     }
+}
+
+void camera_step()
+{
+    int32_t target_x = player_x +
+                       (PLAYER_WIDTH / 2 - 64) * FP_ONE +
+                       player_x_velocity * 40;
+
+    int32_t target_y = player_y +
+                       (PLAYER_HEIGHT / 2 - 32) * FP_ONE;
+
+    int32_t max_x = (MAP_WIDTH * TILE_SIZE - 128) * FP_ONE;
+    int32_t max_y = (MAP_HEIGHT * TILE_SIZE - 64) * FP_ONE;
+
+    target_x = clamp(target_x / FP_ONE, 0, max_x / FP_ONE) * FP_ONE;
+    target_y = clamp(target_y / FP_ONE, 0, max_y / FP_ONE) * FP_ONE;
+
+    camera_x += (target_x - camera_x) / 20;
+    camera_y += (target_y - camera_y) / 3;
 }
 
 uint8_t main()
@@ -272,27 +292,12 @@ start:
         while (time_acc >= STEP_UNITS && steps < MAX_STEPS)
         {
             physics_step(keys);
+            camera_step();
             time_acc -= STEP_UNITS;
             steps++;
         }
         if (time_acc >= STEP_UNITS)
             time_acc = 0; // too far behind, drop the rest instead of catching up
-
-        int32_t target_x = player_x +
-                           (PLAYER_WIDTH / 2 - 64) * FP_ONE +
-                           player_x_velocity * 40;
-
-        int32_t target_y = player_y +
-                           (PLAYER_HEIGHT / 2 - 32) * FP_ONE;
-
-        int32_t max_x = (MAP_WIDTH * TILE_SIZE - 128) * FP_ONE;
-        int32_t max_y = (MAP_HEIGHT * TILE_SIZE - 64) * FP_ONE;
-
-        target_x = clamp(target_x / FP_ONE, 0, max_x / FP_ONE) * FP_ONE;
-        target_y = clamp(target_y / FP_ONE, 0, max_y / FP_ONE) * FP_ONE;
-
-        camera_x += (target_x - camera_x) / 12;
-        camera_y += (target_y - camera_y) / 5;
 
         offset_x = camera_x / FP_ONE;
         offset_y = camera_y / FP_ONE;
@@ -302,7 +307,14 @@ start:
 
         uint8_t frame = 0;
         if (player_walking)
-            frame = (gettime() / 100) % 4;
+            frame = (gettime() / 100) % 4 + 2;
+        else if (player_y_velocity < 0)
+            frame = 6;
+        else if (player_y_velocity > 0)
+            frame = 7;
+        else
+            frame = (gettime() / 500) % 2;
+            
 
         bmp(
             (int16_t)(player_x / FP_ONE) - offset_x,

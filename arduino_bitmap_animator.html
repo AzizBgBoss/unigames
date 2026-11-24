@@ -1,0 +1,1602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arduino Bitmap Animator</title>
+
+<style>
+:root {
+  font-family: system-ui, sans-serif;
+  color: #252a34;
+  background: #f1f3f6;
+}
+* { box-sizing: border-box; }
+
+body {
+  max-width: 1100px;
+  margin: 25px auto;
+  padding: 0 15px;
+}
+
+h1 { margin-bottom: 4px; }
+h3 { margin: 0 0 12px; }
+.subtitle, .hint { color: #77808e; }
+.hint { font-size: 13px; }
+
+.panel {
+  background: white;
+  border: 1px solid #dce1e8;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 14px 0;
+  box-shadow: 0 2px 8px #00000008;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #525c6b;
+}
+
+input {
+  width: 85px;
+  padding: 8px;
+  border: 1px solid #cbd2dc;
+  border-radius: 7px;
+  font: inherit;
+}
+
+input[type="text"] { width: 150px; }
+
+button {
+  padding: 8px 12px;
+  border: 1px solid #cbd2dc;
+  border-radius: 7px;
+  background: white;
+  color: #293241;
+  cursor: pointer;
+  font: inherit;
+}
+
+button:hover { background: #edf2f8; }
+
+button.primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+button.danger { color: #c0392b; }
+button:disabled { opacity: .4; cursor: default; }
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin: 20px 0;
+  border-bottom: 1px solid #cbd2dc;
+}
+
+.tab {
+  border-radius: 6px 6px 0 0;
+  border-bottom: 0;
+}
+
+.tab.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.page { display: none; }
+.page.active { display: block; }
+
+#grid-wrap, #tile-grid-wrap, #map-wrap {
+  display: inline-block;
+  max-width: 100%;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #dce1e8;
+  border-radius: 10px;
+  background-color: #e9edf3;
+}
+
+#grid, #tile-grid {
+  display: grid;
+  width: max-content;
+  gap: 1px;
+  padding: 1px;
+  background: #aeb7c4;
+}
+
+.pixel {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: white;
+  touch-action: none;
+}
+
+textarea {
+  display: block;
+  width: 100%;
+  height: 250px;
+  padding: 12px;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  resize: vertical;
+  background: #111827;
+  color: #d1fae5;
+  font: 13px/1.5 monospace;
+}
+
+.status {
+  font-size: 13px;
+  color: #64748b;
+  min-height: 18px;
+}
+
+#tile-list, #map-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.tile-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.tile-option.active {
+  background: #2563eb;
+  color: white;
+}
+
+.tile-option canvas {
+  image-rendering: pixelated;
+  border: 1px solid #aaa;
+  background: white;
+}
+
+#map-wrap {
+  display: block;
+  width: 100%;
+  max-height: 65vh;
+  overflow: auto;
+  touch-action: pan-x pan-y;
+}
+
+#map-canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  max-width: none;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+#map-palette {
+  align-items: stretch;
+}
+
+#brush-list, #brush-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.map-tile.editing { border-color: #93c5fd; }
+.map-tile.empty canvas { border-style: dashed; }
+.map-tile small { color: #77808e; text-align: center; }
+
+.map-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 76px;
+  padding: 7px;
+  border: 2px solid #cbd2dc;
+  border-radius: 8px;
+  background: white;
+  font-size: 12px;
+}
+
+.map-tile.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.map-tile canvas {
+  image-rendering: pixelated;
+  background-color: white;
+  border: 1px solid #cbd2dc;
+}
+
+#zoomValue {
+  min-width: 42px;
+  text-align: center;
+  font-size: 13px;
+}
+
+@media(max-width:600px) {
+  body { padding: 0 10px; }
+  .panel { padding: 12px; }
+  .pixel { width: 20px; height: 20px; }
+}
+</style>
+</head>
+
+<body>
+
+<h1>Arduino Bitmap Animator</h1>
+<p class="subtitle">Sprite animations, tile editor and map maker</p>
+
+<div class="tabs">
+  <button class="tab active" data-page="animation">Animation</button>
+  <button class="tab" data-page="tiles">Tiles</button>
+  <button class="tab" data-page="map">Map</button>
+</div>
+
+<!-- ANIMATION -->
+
+<div id="animation" class="page active">
+
+<section class="panel">
+<h3>Canvas</h3>
+<div class="toolbar">
+  <label>Width <input id="width" type="number" min="1" max="128" value="16"></label>
+  <label>Height <input id="height" type="number" min="1" max="128" value="16"></label>
+  <button id="resize" class="primary">Create new animation</button>
+</div>
+</section>
+
+<section class="panel">
+<h3>Frames</h3>
+<div class="toolbar">
+  <button id="previous">← Previous</button>
+  <span id="frameInfo">Frame 1 / 1</span>
+  <button id="next">Next →</button>
+  <button id="add">+ Blank frame</button>
+  <button id="duplicate">Duplicate</button>
+  <button id="delete" class="danger">Delete</button>
+</div>
+<div class="toolbar" style="margin-top:12px">
+  <button id="play" class="primary">▶ Play</button>
+  <label>FPS <input id="fps" type="number" min="1" max="60" value="8"></label>
+  <label>Previous frames <input id="onion" type="number" min="0" max="20" value="2"></label>
+</div>
+</section>
+
+<section class="panel">
+<h3>Editor</h3>
+<p class="hint">Click or drag to draw. Right-click or Shift + drag to erase.</p>
+<div id="grid-wrap"><div id="grid"></div></div>
+</section>
+
+<section class="panel">
+<h3>Export</h3>
+<div class="toolbar">
+  <label>Array name <input id="arrayName" type="text" value="player_bmp"></label>
+  <button id="export" class="primary">Export 1D array</button>
+  <button id="copy">Copy output</button>
+</div>
+<textarea id="output" spellcheck="false"></textarea>
+<p id="status" class="status"></p>
+</section>
+</div>
+
+<!-- TILES -->
+
+<div id="tiles" class="page">
+
+<section class="panel">
+<h3>Tile settings</h3>
+<div class="toolbar">
+  <label>Tile size <input id="tileSize" type="number" min="1" max="64" value="8"></label>
+  <button id="setTileSize" class="primary">Apply size</button>
+  <span id="tileSizeInfo" class="hint">8 × 8 pixels</span>
+</div>
+<p class="hint">Dimensions automatically round up to multiples of 8.</p>
+</section>
+
+<section class="panel">
+<h3>Tiles</h3>
+<div class="toolbar">
+  <button id="addTile" class="primary">+ New tile</button>
+  <button id="duplicateTile">Duplicate</button>
+  <button id="deleteTile" class="danger">Delete</button>
+  <button id="moveTileLeft">← Move left</button>
+  <button id="moveTileRight">Move right →</button>
+</div>
+<div id="tile-list"></div>
+<p class="hint">Tile 0 is reserved for EMPTY.</p>
+</section>
+
+<section class="panel">
+<h3>Selected tile</h3>
+<div class="toolbar">
+  <label>Name <input id="tileName" type="text" value="GROUND"></label>
+</div>
+<p class="hint">Click or drag to draw. Right-click or Shift + drag to erase.</p>
+<div id="tile-grid-wrap"><div id="tile-grid"></div></div>
+</section>
+
+<section class="panel">
+<h3>Tile export</h3>
+<div class="toolbar">
+  <label>Array name <input id="tileArrayName" type="text" value="tiles"></label>
+  <button id="exportTiles" class="primary">Export tiles</button>
+  <button id="copyTiles">Copy output</button>
+</div>
+<textarea id="tileOutput" spellcheck="false"></textarea>
+<p id="tileStatus" class="status"></p>
+</section>
+</div>
+
+<!-- MAP -->
+
+<div id="map" class="page">
+
+<section class="panel">
+<h3>Map dimensions</h3>
+<div class="toolbar">
+  <label>Width <input id="mapWidth" type="number" min="1" max="128" value="32"></label>
+  <label>Height <input id="mapHeight" type="number" min="1" max="128" value="16"></label>
+  <button id="createMap" class="primary">Create map</button>
+</div>
+</section>
+
+<section class="panel">
+<h3>Tile palette</h3>
+<p class="hint">Select a tile, then paint directly on the map. Tile previews show the actual bitmap.</p>
+<div id="map-palette"></div>
+<p id="selectedTileInfo" class="hint">Selected: EMPTY (0)</p>
+</section>
+
+<section class="panel">
+<h3>Autotile brushes</h3>
+<p class="hint">A brush picks the right tile for every cell from its neighbors, so you just draw shapes. Click a brush to paint with it (right-click or Shift + drag to erase). To fill a slot, select a tile in the palette above, then click the slot. Right-click a slot to clear it.</p>
+<div id="brush-list"></div>
+<div class="toolbar">
+  <button id="addBrush">+ Empty brush</button>
+  <button id="addSquareBrush">+ Default square brush</button>
+  <button id="deleteBrush" class="danger">Delete brush</button>
+  <label>Name <input id="brushName" type="text"></label>
+  <label><input id="edgeSolid" type="checkbox" checked style="width:auto;padding:0"> Map edges count as neighbors</label>
+  <button id="retileMap">Retile map</button>
+</div>
+<div id="brush-slots"></div>
+</section>
+
+<section class="panel">
+<h3>Map editor</h3>
+
+<div class="toolbar" style="margin-bottom:12px">
+  <label>Zoom
+    <input id="zoom" type="range" min="1" max="8" value="3" style="width:130px">
+  </label>
+  <span id="zoomValue">3×</span>
+  <button id="zoomOut">−</button>
+  <button id="zoomIn">+</button>
+  <button id="fitMap">Reset zoom</button>
+</div>
+
+<div class="toolbar" style="margin-bottom:12px">
+  <button id="fillMap">Fill with selected tile</button>
+  <button id="clearMap">Clear map</button>
+</div>
+
+<p class="hint">Left-click or drag to paint. Right-click or Shift + drag to erase. Scroll horizontally and vertically to navigate large maps.</p>
+
+<div id="map-wrap">
+  <canvas id="map-canvas"></canvas>
+</div>
+
+<p id="mapStatus" class="status"></p>
+</section>
+
+<section class="panel">
+<h3>Map export</h3>
+<div class="toolbar">
+  <label>Array name <input id="mapArrayName" type="text" value="level1"></label>
+  <button id="exportMap" class="primary">Export map</button>
+  <button id="copyMap">Copy output</button>
+</div>
+<textarea id="mapOutput" spellcheck="false"></textarea>
+<p id="mapExportStatus" class="status"></p>
+</section>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+
+function validName(name) {
+  return /^[A-Za-z_]\w*$/.test(name);
+}
+
+function cName(name) {
+  let result = name.trim().toUpperCase()
+    .replace(/[^A-Z0-9_]/g, '_');
+
+  if (!result) result = 'TILE';
+  if (/^[0-9]/.test(result)) result = '_' + result;
+
+  return result;
+}
+
+async function copyOutput(output, status) {
+  if (!output.value) return;
+
+  try {
+    await navigator.clipboard.writeText(output.value);
+    status.textContent = 'Copied to clipboard.';
+  } catch {
+    output.focus();
+    output.select();
+    status.textContent = 'Clipboard unavailable. Output selected.';
+  }
+}
+
+// Tabs
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t =>
+      t.classList.toggle('active', t === tab)
+    );
+
+    document.querySelectorAll('.page').forEach(page =>
+      page.classList.toggle('active', page.id === tab.dataset.page)
+    );
+
+    if (tab.dataset.page === 'map') {
+      renderMap();
+      renderMapPalette();
+    }
+  };
+});
+
+// ============================================================
+// ANIMATION EDITOR
+// ============================================================
+
+const animGrid = $('grid');
+
+let width = 16;
+let height = 16;
+let frames = [new Uint8Array(256)];
+let current = 0;
+let playing = false;
+let timer = null;
+
+function blankFrame() {
+  return new Uint8Array(width * height);
+}
+
+function stop() {
+  playing = false;
+  if (timer !== null) clearInterval(timer);
+  timer = null;
+  $('play').textContent = '▶ Play';
+}
+
+function setFrame(index) {
+  current = Math.max(0, Math.min(frames.length - 1, index));
+  renderAnimation();
+}
+
+function getShade(index, count) {
+  let shade = 255;
+
+  for (let d = count; d >= 1; d--) {
+    const previous = frames[current - d];
+
+    if (previous && previous[index]) {
+      const value = Math.round(
+        190 + (d - 1) * (60 / Math.max(1, count - 1))
+      );
+      shade = Math.min(shade, value);
+    }
+  }
+
+  if (frames[current][index]) shade = 0;
+  return shade;
+}
+
+function renderAnimation() {
+  $('frameInfo').textContent =
+    `Frame ${current + 1} / ${frames.length}`;
+
+  const count = Math.max(0, Math.min(20,
+    Number($('onion').value) || 0));
+
+  animGrid.replaceChildren();
+  animGrid.style.gridTemplateColumns = `repeat(${width}, 24px)`;
+
+  const fragment = document.createDocumentFragment();
+
+  for (let i = 0; i < width * height; i++) {
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'pixel';
+    cell.dataset.index = i;
+
+    const shade = getShade(i, count);
+    cell.style.backgroundColor = `rgb(${shade},${shade},${shade})`;
+
+    fragment.appendChild(cell);
+  }
+
+  animGrid.appendChild(fragment);
+}
+
+function createAnimation() {
+  stop();
+
+  const w = Number($('width').value);
+  const h = Number($('height').value);
+
+  if (!Number.isInteger(w) || !Number.isInteger(h) ||
+      w < 1 || h < 1 || w > 128 || h > 128) {
+    $('status').textContent = 'Dimensions must be integers from 1 to 128.';
+    return;
+  }
+
+  width = w;
+  height = h;
+  frames = [blankFrame()];
+  current = 0;
+  $('output').value = '';
+  renderAnimation();
+}
+
+function paintAnimation(index, value) {
+  if (index < 0 || index >= width * height) return;
+
+  frames[current][index] = value ? 1 : 0;
+
+  const cell = animGrid.children[index];
+
+  if (cell) {
+    const shade = getShade(index,
+      Math.max(0, Number($('onion').value) || 0));
+    cell.style.backgroundColor = `rgb(${shade},${shade},${shade})`;
+  }
+}
+
+function setupDrawing(grid, paint) {
+  let active = false;
+  let value = true;
+
+  grid.addEventListener('pointerdown', e => {
+    const cell = e.target.closest('.pixel');
+
+    if (!cell) return;
+    e.preventDefault();
+
+    active = true;
+    value = !(e.button === 2 || e.shiftKey);
+    paint(Number(cell.dataset.index), value);
+  });
+
+  grid.addEventListener('pointermove', e => {
+    if (!active) return;
+    const cell = e.target.closest('.pixel');
+    if (cell) paint(Number(cell.dataset.index), value);
+  });
+
+  window.addEventListener('pointerup', () => active = false);
+
+  grid.addEventListener('contextmenu', e => e.preventDefault());
+}
+
+setupDrawing(animGrid, paintAnimation);
+
+$('resize').onclick = createAnimation;
+$('previous').onclick = () => setFrame(current - 1);
+$('next').onclick = () => setFrame(current + 1);
+$('onion').onchange = renderAnimation;
+
+$('add').onclick = () => {
+  stop();
+  frames.splice(current + 1, 0, blankFrame());
+  setFrame(current + 1);
+};
+
+$('duplicate').onclick = () => {
+  stop();
+  frames.splice(current + 1, 0, frames[current].slice());
+  setFrame(current + 1);
+};
+
+$('delete').onclick = () => {
+  stop();
+
+  if (frames.length === 1) {
+    frames[0] = blankFrame();
+    renderAnimation();
+    return;
+  }
+
+  frames.splice(current, 1);
+  setFrame(Math.min(current, frames.length - 1));
+};
+
+$('play').onclick = () => {
+  if (playing) {
+    stop();
+    return;
+  }
+
+  const fps = Math.max(1, Math.min(60,
+    Number($('fps').value) || 8));
+
+  playing = true;
+  $('play').textContent = '■ Stop';
+
+  timer = setInterval(() => {
+    setFrame((current + 1) % frames.length);
+  }, 1000 / fps);
+};
+
+$('fps').onchange = () => {
+  if (playing) {
+    stop();
+    $('play').click();
+  }
+};
+
+function exportAnimation() {
+  const name = $('arrayName').value.trim();
+
+  if (!validName(name)) {
+    $('status').textContent = 'Invalid C array name.';
+    return;
+  }
+
+  const bytesPerRow = Math.ceil(width / 8);
+  const lines = [];
+
+  frames.forEach((frame, f) => {
+    lines.push(`    // frame ${f}`);
+
+    for (let y = 0; y < height; y++) {
+      const row = [];
+
+      for (let bx = 0; bx < bytesPerRow; bx++) {
+        let value = 0;
+
+        for (let bit = 0; bit < 8; bit++) {
+          const x = bx * 8 + bit;
+
+          if (x < width && frame[y * width + x])
+            value |= 1 << (7 - bit);
+        }
+
+        row.push('0b' + value.toString(2).padStart(8, '0'));
+      }
+
+      const last = f === frames.length - 1 && y === height - 1;
+      lines.push('    ' + row.join(', ') + (last ? '' : ','));
+    }
+
+    if (f < frames.length - 1) lines.push('');
+  });
+
+  $('output').value =
+    `const unsigned char ${name}[] = {\n` +
+    lines.join('\n') +
+    '\n};\n\n' +
+    `// ${width}x${height}, ${frames.length} frames, ` +
+    `${bytesPerRow * height} bytes per frame`;
+
+  $('status').textContent = 'Animation exported.';
+}
+
+$('export').onclick = exportAnimation;
+$('copy').onclick = () => {
+  if (!$('output').value) exportAnimation();
+  copyOutput($('output'), $('status'));
+};
+
+// ============================================================
+// TILE EDITOR
+// ============================================================
+
+let tileSize = 8;
+
+let tiles = [
+  { name: 'EMPTY', data: new Uint8Array(64) },
+  {
+    name: 'GROUND',
+    data: Uint8Array.from([
+      1,1,1,1,1,1,1,1,
+      1,0,0,0,0,0,0,1,
+      1,0,0,0,0,0,0,1,
+      1,0,0,0,0,0,0,1,
+      1,0,0,0,0,0,0,1,
+      1,0,0,0,0,0,0,1,
+      1,0,0,0,0,0,0,1,
+      1,1,1,1,1,1,1,1
+    ])
+  }
+];
+
+let selectedTile = 1;
+const tileGrid = $('tile-grid');
+
+function blankTile() {
+  return new Uint8Array(tileSize * tileSize);
+}
+
+function renderTileList() {
+  const list = $('tile-list');
+  list.replaceChildren();
+
+  tiles.forEach((tile, i) => {
+    const button = document.createElement('button');
+
+    button.className = 'tile-option' +
+      (i === selectedTile ? ' active' : '');
+
+    const canvas = document.createElement('canvas');
+    canvas.width = tileSize;
+    canvas.height = tileSize;
+    canvas.style.width = '32px';
+    canvas.style.height = '32px';
+
+    drawTile(canvas, tile.data);
+
+    const label = document.createElement('span');
+    label.textContent = `${i}: ${tile.name}`;
+
+    button.append(canvas, label);
+    button.onclick = () => selectTile(i);
+
+    list.appendChild(button);
+  });
+}
+
+function selectTile(index) {
+  selectedTile = index;
+
+  $('tileName').value = tiles[index].name;
+  $('tileName').disabled = index === 0;
+
+  $('deleteTile').disabled = index === 0;
+  $('moveTileLeft').disabled = index <= 1;
+  $('moveTileRight').disabled = index === 0 || index === tiles.length - 1;
+
+  renderTileList();
+  renderTileGrid();
+  renderMapPalette();
+  renderMap();
+}
+
+function renderTileGrid() {
+  tileGrid.replaceChildren();
+  tileGrid.style.gridTemplateColumns =
+    `repeat(${tileSize}, 24px)`;
+
+  const fragment = document.createDocumentFragment();
+
+  for (let i = 0; i < tileSize * tileSize; i++) {
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'pixel';
+    cell.dataset.index = i;
+
+    cell.style.backgroundColor =
+      tiles[selectedTile].data[i] ? '#111827' : 'white';
+
+    fragment.appendChild(cell);
+  }
+
+  tileGrid.appendChild(fragment);
+}
+
+function paintTile(index, value) {
+  if (selectedTile === 0 ||
+      index < 0 || index >= tileSize * tileSize) return;
+
+  tiles[selectedTile].data[index] = value ? 1 : 0;
+
+  const cell = tileGrid.children[index];
+
+  if (cell)
+    cell.style.backgroundColor = value ? '#111827' : 'white';
+
+  renderTileList();
+  renderMapPalette();
+  renderMap();
+}
+
+setupDrawing(tileGrid, paintTile);
+
+function drawTile(canvas, data) {
+  const ctx = canvas.getContext('2d');
+  const image = ctx.createImageData(tileSize, tileSize);
+
+  for (let i = 0; i < data.length; i++) {
+    const p = i * 4;
+    const c = data[i] ? 25 : 255;
+
+    image.data[p] = c;
+    image.data[p + 1] = c;
+    image.data[p + 2] = c;
+    image.data[p + 3] = 255;
+  }
+
+  ctx.putImageData(image, 0, 0);
+}
+
+$('tileName').onchange = () => {
+  if (selectedTile === 0) return;
+
+  const name = $('tileName').value.trim();
+
+  if (!name || tiles.some((t, i) =>
+    i !== selectedTile &&
+    t.name.toUpperCase() === name.toUpperCase()
+  )) {
+    $('tileName').value = tiles[selectedTile].name;
+    $('tileStatus').textContent = 'Name is empty or already in use.';
+    return;
+  }
+
+  tiles[selectedTile].name = name;
+  renderTileList();
+  renderMapPalette();
+};
+
+$('addTile').onclick = () => {
+  const names = tiles.map(t => t.name.toUpperCase());
+  let n = 1;
+
+  while (names.includes('TILE' + n)) n++;
+
+  tiles.push({
+    name: 'TILE' + n,
+    data: blankTile()
+  });
+
+  selectTile(tiles.length - 1);
+};
+
+$('duplicateTile').onclick = () => {
+  let n = 1;
+  const names = tiles.map(t => t.name.toUpperCase());
+
+  while (names.includes('TILE' + n)) n++;
+
+  const original = selectedTile;
+  remapTiles(v => v > original ? v + 1 : v);
+
+  tiles.splice(selectedTile + 1, 0, {
+    name: 'TILE' + n,
+    data: tiles[selectedTile].data.slice()
+  });
+
+  selectTile(selectedTile + 1);
+};
+
+$('deleteTile').onclick = () => {
+  if (selectedTile === 0) return;
+
+  const removed = selectedTile;
+
+  tiles.splice(removed, 1);
+
+  remapTiles(v => v === removed ? null : v > removed ? v - 1 : v);
+
+  selectTile(Math.min(removed, tiles.length - 1));
+};
+
+function moveTile(direction) {
+  if (selectedTile === 0) return;
+
+  const destination = selectedTile + direction;
+
+  if (destination < 1 || destination >= tiles.length) return;
+
+  [tiles[selectedTile], tiles[destination]] =
+    [tiles[destination], tiles[selectedTile]];
+
+  remapTiles(v => v === selectedTile ? destination : v === destination ? selectedTile : v);
+
+  selectTile(destination);
+}
+
+$('moveTileLeft').onclick = () => moveTile(-1);
+$('moveTileRight').onclick = () => moveTile(1);
+
+$('setTileSize').onclick = () => {
+  const requested = Number($('tileSize').value);
+
+  if (!Number.isInteger(requested) ||
+      requested < 1 || requested > 64) {
+    $('tileStatus').textContent = 'Enter a size from 1 to 64.';
+    return;
+  }
+
+  const newSize = Math.ceil(requested / 8) * 8;
+
+  $('tileSize').value = newSize;
+
+  if (newSize === tileSize) return;
+
+  const oldSize = tileSize;
+
+  tiles = tiles.map(tile => {
+    const data = new Uint8Array(newSize * newSize);
+
+    for (let y = 0; y < Math.min(oldSize, newSize); y++) {
+      for (let x = 0; x < Math.min(oldSize, newSize); x++) {
+        data[y * newSize + x] = tile.data[y * oldSize + x];
+      }
+    }
+
+    return { name: tile.name, data };
+  });
+
+  tileSize = newSize;
+
+  $('tileSizeInfo').textContent =
+    `${tileSize} × ${tileSize} pixels`;
+
+  renderTileGrid();
+  renderTileList();
+  renderMapPalette();
+  renderMap();
+
+  $('tileStatus').textContent =
+    `Tile size changed to ${tileSize} × ${tileSize}.`;
+};
+
+function exportTiles() {
+  const name = $('tileArrayName').value.trim();
+
+  if (!validName(name)) {
+    $('tileStatus').textContent = 'Invalid C array name.';
+    return;
+  }
+
+  const enumNames = [];
+  const usedNames = new Set();
+
+  for (const tile of tiles) {
+    const n = cName(tile.name);
+
+    if (usedNames.has(n)) {
+      $('tileStatus').textContent =
+        'Tile names must be unique as C identifiers.';
+      return;
+    }
+
+    usedNames.add(n);
+    enumNames.push(n);
+  }
+
+  const lines = [
+    `#define TILE_SIZE ${tileSize}`,
+    '',
+    'enum Tile',
+    '{',
+    ...enumNames.map((n, i) =>
+      `    ${n} = ${i}${i < enumNames.length - 1 ? ',' : ''}`
+    ),
+    '};',
+    '',
+    `const unsigned char ${name}[] = {`
+  ];
+
+  tiles.forEach((tile, t) => {
+    lines.push(`    // ${t}: ${enumNames[t]}`);
+
+    for (let y = 0; y < tileSize; y++) {
+      const row = [];
+
+      for (let bx = 0; bx < tileSize / 8; bx++) {
+        let value = 0;
+
+        for (let bit = 0; bit < 8; bit++) {
+          const x = bx * 8 + bit;
+
+          if (tile.data[y * tileSize + x])
+            value |= 1 << (7 - bit);
+        }
+
+        row.push('0b' + value.toString(2).padStart(8, '0'));
+      }
+
+      const last = t === tiles.length - 1 && y === tileSize - 1;
+      lines.push('    ' + row.join(', ') + (last ? '' : ','));
+    }
+
+    if (t < tiles.length - 1) lines.push('');
+  });
+
+  lines.push('};');
+  lines.push('');
+  lines.push(`// ${tiles.length} tiles, ${tileSize * tileSize / 8} bytes per tile`);
+
+  $('tileOutput').value = lines.join('\n');
+  $('tileStatus').textContent = 'Tiles exported.';
+}
+
+$('exportTiles').onclick = exportTiles;
+$('copyTiles').onclick = () => {
+  if (!$('tileOutput').value) exportTiles();
+  copyOutput($('tileOutput'), $('tileStatus'));
+};
+
+// ============================================================
+// MAP EDITOR
+// ============================================================
+
+let mapWidth = 32;
+let mapHeight = 16;
+let mapData = new Uint8Array(mapWidth * mapHeight);
+
+let selectedMapTile = 1;
+let brushes = [];
+let activeBrush = -1;
+let brushMode = false;
+let zoom = 3;
+let mapDrawing = false;
+let mapDrawValue = 1;
+
+const mapCanvas = $('map-canvas');
+const mapCtx = mapCanvas.getContext('2d');
+
+function renderMapPalette() {
+  const palette = $('map-palette');
+  palette.replaceChildren();
+
+  tiles.forEach((tile, i) => {
+    const button = document.createElement('button');
+
+    button.className = 'map-tile' +
+      (i === selectedMapTile ? (brushMode ? ' editing' : ' active') : '');
+
+    const canvas = document.createElement('canvas');
+    canvas.width = tileSize;
+    canvas.height = tileSize;
+
+    const previewSize = Math.min(48, tileSize * 4);
+    canvas.style.width = previewSize + 'px';
+    canvas.style.height = previewSize + 'px';
+
+    drawTile(canvas, tile.data);
+
+    const name = document.createElement('span');
+    name.textContent = `${i}: ${tile.name}`;
+
+    button.append(canvas, name);
+
+    button.onclick = () => {
+      selectedMapTile = i;
+      brushMode = false;
+      renderMapPalette();
+    };
+
+    palette.appendChild(button);
+  });
+
+  renderBrushes();
+  updateSelectedTileInfo();
+}
+
+function updateSelectedTileInfo() {
+  const b = brushMode ? brushes[activeBrush] : null;
+
+  if (b) {
+    $('selectedTileInfo').textContent = `Selected brush: ${b.name}`;
+    return;
+  }
+
+  if (selectedMapTile >= tiles.length) selectedMapTile = 0;
+
+  $('selectedTileInfo').textContent =
+    `Selected: ${tiles[selectedMapTile].name} (${selectedMapTile})`;
+}
+
+// ---- Autotile brushes ----
+// Slots 0-15: bitmask of neighbors present (N=1, E=2, S=4, W=8).
+// Slots 16-19: all four sides present but one diagonal missing (inner corners).
+
+const SLOT_NAMES = [
+  'Single', 'Cap bottom', 'Cap left', 'Bottom-left corner',
+  'Cap top', 'Vertical', 'Top-left corner', 'Left edge',
+  'Cap right', 'Bottom-right corner', 'Horizontal', 'Bottom edge',
+  'Top-right corner', 'Right edge', 'Top edge', 'Center',
+  'Inner top-left', 'Inner top-right', 'Inner bottom-left', 'Inner bottom-right'
+];
+
+function remapTiles(fn) {
+  mapData = mapData.map(v => fn(v) ?? 0);
+
+  brushes.forEach(b => {
+    b.slots = b.slots.map(v => v === null ? null : (fn(v) ?? null));
+  });
+}
+
+function uniqueBrushName(base) {
+  let name = base;
+  let i = 2;
+
+  while (brushes.some(b => b.name === name)) name = base + ' ' + i++;
+
+  return name;
+}
+
+function makeSquareTile(slot) {
+  const s = tileSize;
+  const data = new Uint8Array(s * s);
+  const dot = (x, y) => { data[y * s + x] = 1; };
+
+  if (slot < 16) {
+    for (let i = 0; i < s; i++) {
+      if (!(slot & 1)) dot(i, 0);
+      if (!(slot & 4)) dot(i, s - 1);
+      if (!(slot & 8)) dot(0, i);
+      if (!(slot & 2)) dot(s - 1, i);
+    }
+  } else {
+    const corners = [[0, 0], [s - 1, 0], [0, s - 1], [s - 1, s - 1]];
+    dot(...corners[slot - 16]);
+  }
+
+  return data;
+}
+
+function createSquareBrush() {
+  const used = new Set(tiles.map(t => t.name.toUpperCase()));
+  const slots = [];
+
+  for (let k = 0; k < SLOT_NAMES.length; k++) {
+    const base = cName('SQ_' + SLOT_NAMES[k]);
+    let name = base;
+    let n = 2;
+
+    while (used.has(name)) name = base + '_' + n++;
+
+    used.add(name);
+    tiles.push({ name, data: makeSquareTile(k) });
+    slots.push(tiles.length - 1);
+  }
+
+  brushes.push({ name: uniqueBrushName('Square'), slots });
+  activeBrush = brushes.length - 1;
+}
+
+function brushTileSet(b) {
+  return new Set(b.slots.filter(v => v !== null && v > 0));
+}
+
+function brushBaseTile(b) {
+  return b.slots[15] ?? b.slots.find(v => v != null);
+}
+
+function retileCell(b, set, x, y) {
+  const i = y * mapWidth + x;
+
+  if (!set.has(mapData[i])) return;
+
+  const has = (dx, dy) => {
+    const nx = x + dx;
+    const ny = y + dy;
+
+    if (nx < 0 || ny < 0 || nx >= mapWidth || ny >= mapHeight)
+      return $('edgeSolid').checked;
+
+    return set.has(mapData[ny * mapWidth + nx]);
+  };
+
+  const mask = (has(0, -1) ? 1 : 0) | (has(1, 0) ? 2 : 0) |
+               (has(0, 1) ? 4 : 0) | (has(-1, 0) ? 8 : 0);
+
+  let slot = mask;
+
+  if (mask === 15) {
+    if (!has(-1, -1)) slot = 16;
+    else if (!has(1, -1)) slot = 17;
+    else if (!has(-1, 1)) slot = 18;
+    else if (!has(1, 1)) slot = 19;
+  }
+
+  const tile = b.slots[slot] ?? b.slots[mask] ?? b.slots[15];
+
+  if (tile != null) mapData[i] = tile;
+}
+
+function retileAll(b) {
+  const set = brushTileSet(b);
+
+  for (let y = 0; y < mapHeight; y++)
+    for (let x = 0; x < mapWidth; x++)
+      retileCell(b, set, x, y);
+}
+
+function paintBrush(b, x, y, erase) {
+  const base = brushBaseTile(b);
+
+  if (!erase && base == null) {
+    $('mapStatus').textContent = 'This brush has no tiles assigned yet.';
+    return;
+  }
+
+  const set = brushTileSet(b);
+
+  mapData[y * mapWidth + x] = erase ? 0 : base;
+
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const nx = x + dx;
+      const ny = y + dy;
+
+      if (nx >= 0 && ny >= 0 && nx < mapWidth && ny < mapHeight)
+        retileCell(b, set, nx, ny);
+    }
+  }
+}
+
+function slotCanvas(tileIndex) {
+  const canvas = document.createElement('canvas');
+  canvas.width = tileSize;
+  canvas.height = tileSize;
+
+  const size = Math.min(40, tileSize * 4);
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+
+  if (tileIndex != null && tiles[tileIndex])
+    drawTile(canvas, tiles[tileIndex].data);
+
+  return canvas;
+}
+
+function renderBrushes() {
+  const list = $('brush-list');
+  const slotsBox = $('brush-slots');
+
+  list.replaceChildren();
+  slotsBox.replaceChildren();
+
+  brushes.forEach((b, i) => {
+    const button = document.createElement('button');
+
+    button.className = 'map-tile' +
+      (i === activeBrush ? (brushMode ? ' active' : ' editing') : '');
+
+    const name = document.createElement('span');
+    name.textContent = b.name;
+
+    button.append(slotCanvas(brushBaseTile(b)), name);
+
+    button.onclick = () => {
+      activeBrush = i;
+      brushMode = true;
+      renderMapPalette();
+    };
+
+    list.appendChild(button);
+  });
+
+  const b = brushes[activeBrush];
+
+  $('brushName').value = b ? b.name : '';
+  $('brushName').disabled = !b;
+  $('deleteBrush').disabled = !b;
+  $('retileMap').disabled = !b;
+
+  if (!b) return;
+
+  SLOT_NAMES.forEach((label, k) => {
+    const button = document.createElement('button');
+
+    button.className = 'map-tile' + (b.slots[k] == null ? ' empty' : '');
+
+    const name = document.createElement('small');
+    name.textContent = label;
+
+    button.append(slotCanvas(b.slots[k]), name);
+
+    button.onclick = () => {
+      b.slots[k] = selectedMapTile > 0 ? selectedMapTile : null;
+      renderBrushes();
+    };
+
+    button.oncontextmenu = e => {
+      e.preventDefault();
+      b.slots[k] = null;
+      renderBrushes();
+    };
+
+    slotsBox.appendChild(button);
+  });
+}
+
+$('brushName').onchange = () => {
+  const b = brushes[activeBrush];
+  const name = $('brushName').value.trim();
+
+  if (b && name) b.name = name;
+
+  renderBrushes();
+  updateSelectedTileInfo();
+};
+
+$('addBrush').onclick = () => {
+  brushes.push({
+    name: uniqueBrushName('Brush'),
+    slots: new Array(SLOT_NAMES.length).fill(null)
+  });
+
+  activeBrush = brushes.length - 1;
+  brushMode = true;
+  renderMapPalette();
+};
+
+$('addSquareBrush').onclick = () => {
+  createSquareBrush();
+  brushMode = true;
+  selectTile(selectedTile);
+};
+
+$('deleteBrush').onclick = () => {
+  if (activeBrush < 0) return;
+
+  brushes.splice(activeBrush, 1);
+  activeBrush = Math.min(activeBrush, brushes.length - 1);
+
+  if (!brushes.length) brushMode = false;
+
+  renderMapPalette();
+};
+
+$('retileMap').onclick = () => {
+  const b = brushes[activeBrush];
+
+  if (!b) return;
+
+  retileAll(b);
+  renderMap();
+};
+
+function renderMap() {
+  const w = mapWidth * tileSize;
+  const h = mapHeight * tileSize;
+
+  mapCanvas.width = w;
+  mapCanvas.height = h;
+
+  mapCanvas.style.width = (w * zoom) + 'px';
+  mapCanvas.style.height = (h * zoom) + 'px';
+
+  mapCtx.fillStyle = '#ffffff';
+  mapCtx.fillRect(0, 0, w, h);
+
+  for (let my = 0; my < mapHeight; my++) {
+    for (let mx = 0; mx < mapWidth; mx++) {
+      const index = mapData[my * mapWidth + mx];
+      const tile = tiles[index];
+
+      if (!tile) continue;
+
+      const x0 = mx * tileSize;
+      const y0 = my * tileSize;
+
+      for (let py = 0; py < tileSize; py++) {
+        for (let px = 0; px < tileSize; px++) {
+          if (tile.data[py * tileSize + px]) {
+            mapCtx.fillStyle = '#111827';
+            mapCtx.fillRect(x0 + px, y0 + py, 1, 1);
+          }
+        }
+      }
+    }
+  }
+
+  // Tile boundaries
+  mapCtx.strokeStyle = 'rgba(100,116,139,0.5)';
+  mapCtx.lineWidth = 0.5;
+
+  for (let x = 0; x <= mapWidth; x++) {
+    mapCtx.beginPath();
+    mapCtx.moveTo(x * tileSize, 0);
+    mapCtx.lineTo(x * tileSize, h);
+    mapCtx.stroke();
+  }
+
+  for (let y = 0; y <= mapHeight; y++) {
+    mapCtx.beginPath();
+    mapCtx.moveTo(0, y * tileSize);
+    mapCtx.lineTo(w, y * tileSize);
+    mapCtx.stroke();
+  }
+
+  $('zoom').value = zoom;
+  $('zoomValue').textContent = zoom + '×';
+}
+
+function paintMap(index, value) {
+  if (index < 0 || index >= mapData.length) return;
+
+  const b = brushMode ? brushes[activeBrush] : null;
+
+  if (b) {
+    paintBrush(b, index % mapWidth, Math.floor(index / mapWidth), value === 0);
+    return;
+  }
+
+  mapData[index] = value;
+}
+
+function getMapIndex(event) {
+  const rect = mapCanvas.getBoundingClientRect();
+
+  const x = Math.floor(
+    (event.clientX - rect.left) / (tileSize * zoom)
+  );
+
+  const y = Math.floor(
+    (event.clientY - rect.top) / (tileSize * zoom)
+  );
+
+  if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight)
+    return -1;
+
+  return y * mapWidth + x;
+}
+
+mapCanvas.addEventListener('pointerdown', e => {
+  if (e.button !== 0 && e.button !== 2) return;
+
+  e.preventDefault();
+
+  mapDrawing = true;
+
+  mapDrawValue = e.button === 2 || e.shiftKey
+    ? 0
+    : selectedMapTile;
+
+  const index = getMapIndex(e);
+
+  if (index >= 0) {
+    paintMap(index, mapDrawValue);
+    renderMap();
+  }
+});
+
+mapCanvas.addEventListener('pointermove', e => {
+  if (!mapDrawing) return;
+
+  const index = getMapIndex(e);
+
+  if (index >= 0) {
+    paintMap(index, mapDrawValue);
+    renderMap();
+  }
+});
+
+mapCanvas.addEventListener('contextmenu', e => e.preventDefault());
+
+window.addEventListener('pointerup', () => {
+  mapDrawing = false;
+});
+
+function setZoom(value) {
+  zoom = Math.max(1, Math.min(8, value));
+  renderMap();
+}
+
+$('zoom').oninput = () => setZoom(Number($('zoom').value));
+$('zoomIn').onclick = () => setZoom(zoom + 1);
+$('zoomOut').onclick = () => setZoom(zoom - 1);
+$('fitMap').onclick = () => setZoom(3);
+
+$('createMap').onclick = () => {
+  const w = Number($('mapWidth').value);
+  const h = Number($('mapHeight').value);
+
+  if (!Number.isInteger(w) || !Number.isInteger(h) ||
+      w < 1 || h < 1 || w > 128 || h > 128) {
+    $('mapStatus').textContent =
+      'Dimensions must be integers from 1 to 128.';
+    return;
+  }
+
+  mapWidth = w;
+  mapHeight = h;
+  mapData = new Uint8Array(w * h);
+
+  renderMap();
+  $('mapStatus').textContent = `Created ${w} × ${h} map.`;
+};
+
+$('fillMap').onclick = () => {
+  const b = brushMode ? brushes[activeBrush] : null;
+  const base = b ? brushBaseTile(b) : selectedMapTile;
+
+  if (base == null) return;
+
+  mapData.fill(base);
+  if (b) retileAll(b);
+  renderMap();
+};
+
+$('clearMap').onclick = () => {
+  mapData.fill(0);
+  renderMap();
+};
+
+function exportMap() {
+  const name = $('mapArrayName').value.trim();
+
+  if (!validName(name)) {
+    $('mapExportStatus').textContent = 'Invalid C array name.';
+    return;
+  }
+
+  const lines = [
+    `#define MAP_WIDTH ${mapWidth}`,
+    `#define MAP_HEIGHT ${mapHeight}`,
+    '',
+    `const uint8_t ${name}[MAP_HEIGHT * MAP_WIDTH] = {`
+  ];
+
+  for (let y = 0; y < mapHeight; y++) {
+    const row = [];
+
+    for (let x = 0; x < mapWidth; x++)
+      row.push(mapData[y * mapWidth + x]);
+
+    lines.push('    ' + row.join(', ') +
+      (y < mapHeight - 1 ? ',' : ''));
+  }
+
+  lines.push('};');
+
+  $('mapOutput').value = lines.join('\n');
+
+  $('mapExportStatus').textContent =
+    `Exported ${mapWidth * mapHeight} cells.`;
+}
+
+$('exportMap').onclick = exportMap;
+$('copyMap').onclick = () => {
+  if (!$('mapOutput').value) exportMap();
+  copyOutput($('mapOutput'), $('mapExportStatus'));
+};
+
+// INITIALIZE
+
+createAnimation();
+createSquareBrush();
+renderTileList();
+selectTile(1);
+renderMapPalette();
+renderMap();
+
+})();
+</script>
+</body>
+</html>
