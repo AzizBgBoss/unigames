@@ -1,7 +1,7 @@
 #include "sprites.h"
 #include "tiles.h"
 #include "maps.h"
-// #include "song.h"
+#include "song.h"
 
 #define TARGET_FPS 60
 #define FRAME_TIME (1000 / TARGET_FPS)
@@ -255,20 +255,20 @@ uint8_t main()
         printf("NES keyboard unsupported, exiting.\n");
         return 1;
     }
-/*
+    uint8_t m = true;
     if (isflagsupported(FLAG_AUDIO, AUDIO_ENGINE))
     {
         flag(FLAG_AUDIO, AUDIO_ENGINE);
         printf("Starting music...\n");
         audioload(0, 0, smb_audio_sfx, sizeof(smb_audio_sfx));
         audioload(1, 0, smb_audio_music, sizeof(smb_audio_music));
-        music(0);
+        music(m ? 0 : -1);
     }
     else
     {
         printf("SFX engine unsupported, skipping...\n");
     }
-*/
+
 start:
     memcpy(map, level1, sizeof(map));
 
@@ -283,6 +283,13 @@ start:
         last_time = now;
 
         uint8_t keys = getkey();
+
+        if (keys & KEY_SELECT)
+        {
+            m = m == 0 ? -1 : 0;
+            music(-1);
+            music(m ? 0 : -1);
+        }
 
         if ((keys & KEY_A) && !(prev_keys & KEY_A))
             jump_buffer = JUMP_BUFFER_STEPS;
