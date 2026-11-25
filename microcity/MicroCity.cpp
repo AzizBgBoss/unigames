@@ -59,7 +59,7 @@ uint8_t* GetPowerGrid()
   return PowerGrid;
 }
 
-uint32_t lastframe = gettime();
+uint64_t lastframe = gettime();
 
 int main()
 {

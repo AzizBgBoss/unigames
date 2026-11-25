@@ -43,183 +43,314 @@
 // game state
 int8_t xOffset, yOffset;
 bool isFacingY = true;
-uint16_t money = 50;
+uint32_t money = 50;
 uint8_t taxtime = 200;
 uint8_t tax;
-uint16_t seeds = 0, fruits = 0, hoes = 0;
-uint16_t water = 1000;
+uint32_t seeds = 0, fruits = 0, hoes = 0;
+uint32_t water = 1000;
 int lasttime;
 uint8_t keys;
 uint8_t acd; // interact cooldown, in frames
 uint8_t mapelements[MAP_N];
 uint8_t treeage[MAP_N];
 
-// save slot (in-memory, replaces the EEPROM emulation)
-uint16_t s_money, s_seeds, s_fruits, s_hoes, s_water;
-uint8_t s_taxtime, s_tax;
-uint8_t s_map[MAP_N];
-uint8_t s_age[MAP_N];
-
-uint8_t sprites[136] = {
-  // stone, 16x16 (2 bytes per row)
-  0b11111111, 0b11111111,
-  0b11111111, 0b11111111,
-  0b11101111, 0b11111111,
-  0b11111111, 0b11111111,
-  0b11111111, 0b11111111,
-  0b11111111, 0b11111111,
-  0b11111111, 0b11111111,
-  0b11111111, 0b11111011,
-  0b11111111, 0b11111111,
-  0b11111111, 0b11111111,
-  0b11111111, 0b11111111,
-  0b11111111, 0b11111111,
-  0b11111101, 0b11111111,
-  0b11111111, 0b11111111,
-  0b11111111, 0b11111111,
-  0b11111111, 0b11111111,
-  // player y
-  0b00000000, 0b00111100, 0b01000010, 0b11000011,
-  0b11000011, 0b01000010, 0b00111100, 0b00000000,
-  // player x
-  0b00011000, 0b00111100, 0b01000010, 0b01000010,
-  0b01000010, 0b01000010, 0b00111100, 0b00011000,
-  // coin
-  0b00000000, 0b00111100, 0b01000010, 0b01011010,
-  0b01011010, 0b01000010, 0b00111100, 0b00000000,
-  // seed villager
-  0b00000000, 0b00111100, 0b01000010, 0b11000011,
-  0b11000011, 0b01011010, 0b00111100, 0b00111100,
-  // fruit villager
-  0b00111100, 0b11000010, 0b11000010, 0b00111100,
-  0b00000100, 0b00111100, 0b00100100, 0b00111100,
-  // hoe villager
-  0b00000000, 0b00111100, 0b01000010, 0b11000011,
-  0b11000011, 0b10111100, 0b10000000, 0b10000000,
-  // farmland
-  0b11000100, 0b01010010, 0b00100100, 0b11011010,
-  0b01010101, 0b10110110, 0b01010110, 0b11011011,
-  // tree 1
-  0b11000100, 0b00000000, 0b10000000, 0b00011000,
-  0b00011001, 0b00000000, 0b00000000, 0b01011011,
-  // tree 2
-  0b11000100, 0b00000000, 0b00011000, 0b00111100,
-  0b00111100, 0b00011000, 0b00000000, 0b01011011,
-  // tree 3
-  0b00000000, 0b00111100, 0b01111110, 0b01111110,
-  0b01111110, 0b01111110, 0b00111100, 0b00000000,
-  // save
-  0b00111111, 0b01001101, 0b10001101, 0b10000001,
-  0b10000001, 0b10111101, 0b10111101, 0b11111111,
-  // load
-  0b00011000, 0b00111100, 0b01011010, 0b00011000,
-  0b00000000, 0b11111111, 0b00000000, 0b11111111,
-  // water
-  0b00111100, 0b01111110, 0b11111111, 0b11111111,
-  0b10111101, 0b10000001, 0b10000001, 0b01111110,
+const uint8_t sprites[136] = {
+    // stone, 16x16 (2 bytes per row)
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11101111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111011,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111101,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    0b11111111,
+    // player y
+    ~0b00000000,
+    ~0b00111100,
+    ~0b01000010,
+    ~0b11000011,
+    ~0b11000011,
+    ~0b01000010,
+    ~0b00111100,
+    ~0b00000000,
+    // player x
+    ~0b00011000,
+    ~0b00111100,
+    ~0b01000010,
+    ~0b01000010,
+    ~0b01000010,
+    ~0b01000010,
+    ~0b00111100,
+    ~0b00011000,
+    // coin
+    ~0b00000000,
+    ~0b00111100,
+    ~0b01000010,
+    ~0b01011010,
+    ~0b01011010,
+    ~0b01000010,
+    ~0b00111100,
+    ~0b00000000,
+    // seed villager
+    ~0b00000000,
+    ~0b00111100,
+    ~0b01000010,
+    ~0b11000011,
+    ~0b11000011,
+    ~0b01011010,
+    ~0b00111100,
+    ~0b00111100,
+    // fruit villager
+    ~0b00111100,
+    ~0b11000010,
+    ~0b11000010,
+    ~0b00111100,
+    ~0b00000100,
+    ~0b00111100,
+    ~0b00100100,
+    ~0b00111100,
+    // hoe villager
+    ~0b00000000,
+    ~0b00111100,
+    ~0b01000010,
+    ~0b11000011,
+    ~0b11000011,
+    ~0b10111100,
+    ~0b10000000,
+    ~0b10000000,
+    // farmland
+    ~0b11000100,
+    ~0b01010010,
+    ~0b00100100,
+    ~0b11011010,
+    ~0b01010101,
+    ~0b10110110,
+    ~0b01010110,
+    ~0b11011011,
+    // tree 1
+    ~0b11000100,
+    ~0b00000000,
+    ~0b10000000,
+    ~0b00011000,
+    ~0b00011001,
+    ~0b00000000,
+    ~0b00000000,
+    ~0b01011011,
+    // tree 2
+    ~0b11000100,
+    ~0b00000000,
+    ~0b00011000,
+    ~0b00111100,
+    ~0b00111100,
+    ~0b00011000,
+    ~0b00000000,
+    ~0b01011011,
+    // tree 3
+    ~0b00000000,
+    ~0b00111100,
+    ~0b01111110,
+    ~0b01111110,
+    ~0b01111110,
+    ~0b01111110,
+    ~0b00111100,
+    ~0b00000000,
+    // save
+    ~0b00111111,
+    ~0b01001101,
+    ~0b10001101,
+    ~0b10000001,
+    ~0b10000001,
+    ~0b10111101,
+    ~0b10111101,
+    ~0b11111111,
+    // load
+    ~0b00011000,
+    ~0b00111100,
+    ~0b01011010,
+    ~0b00011000,
+    ~0b00000000,
+    ~0b11111111,
+    ~0b00000000,
+    ~0b11111111,
+    // water
+    ~0b00111100,
+    ~0b01111110,
+    ~0b11111111,
+    ~0b11111111,
+    ~0b10111101,
+    ~0b10000001,
+    ~0b10000001,
+    ~0b01111110,
 };
 
 // ---- drawing helpers ----
-void pixel(int x, int y, int color) {
-  if (x >= 0 && x < 128 && y >= 0 && y < 64) setpixel(x, y, color);
+void pixel(int x, int y, int color)
+{
+  setpixel(x, y, color);
 }
 
 // 1bpp bitmap from sprites[off], rows padded to whole bytes
-void drawBitmap(int x, int y, int off, int w, int h, int color) {
-  int bpr = (w + 7) >> 3;
-  for (int yy = 0; yy < h; yy++) {
-    for (int xx = 0; xx < w; xx++) {
-      int row = sprites[off + yy * bpr + (xx >> 3)];
-      if ((row >> (7 - (xx & 7))) & 1) pixel(x + xx, y + yy, color);
-    }
-  }
+void drawBitmap(int x, int y, int off, int w, int h, int color)
+{
+  blit(x, y, w, h, sprites + off, 0, 0, 8, BLIT_1BPP | BLIT_TRANSPARENT, NULL, 1);
 }
 
-void fillRect(int x, int y, int w, int h, int color) {
+void fillRect(int x, int y, int w, int h, int color)
+{
   fillrect(x, y, w, h, color);
 }
 
-void drawRect(int x, int y, int w, int h, int color) {
+void drawRect(int x, int y, int w, int h, int color)
+{
   drawrect(x, y, w, h, color);
 }
 
 // draws a number without numtostr (its buffer was not NUL-terminated, so stale digits showed up)
-void drawNumber(uint32_t value, int x, int y) {
-  int n = 1;
-  uint32_t t = value;
-  while (t >= 10) {
-    t = t / 10;
-    n++;
+void drawNumber(uint32_t value, int x, int y)
+{
+  drawnum(value, x, y, 1);
+}
+
+typedef struct
+{
+  uint32_t money, seeds, fruits, hoes, water;
+  uint8_t taxtime, tax;
+  uint8_t map[MAP_N];
+  uint8_t age[MAP_N];
+} Data;
+
+Data savedata;
+
+void saveGame()
+{
+  savedata.money = money;
+  savedata.seeds = seeds;
+  savedata.fruits = fruits;
+  savedata.hoes = hoes;
+  savedata.water = water;
+  savedata.taxtime = taxtime;
+  savedata.tax = tax;
+  for (int i = 0; i < MAP_N; i++)
+  {
+    savedata.map[i] = mapelements[i];
+    savedata.age[i] = treeage[i];
   }
-  for (int i = n - 1; i >= 0; i--) {
-    drawchar('0' + value % 10, x + i * 4, y, 1);
-    value = value / 10;
+
+  save(&savedata, sizeof(savedata));
+}
+
+void loadGame()
+{
+  load(&savedata, sizeof(savedata));
+  money = savedata.money;
+  seeds = savedata.seeds;
+  fruits = savedata.fruits;
+  hoes = savedata.hoes;
+  water = savedata.water;
+  taxtime = savedata.taxtime;
+  tax = savedata.tax;
+  for (int i = 0; i < MAP_N; i++)
+  {
+    mapelements[i] = savedata.map[i];
+    treeage[i] = savedata.age[i];
   }
 }
 
-// ---- game logic ----
-void saveGame() {
-  s_money = money; s_seeds = seeds; s_fruits = fruits; s_hoes = hoes;
-  s_water = water; s_taxtime = taxtime; s_tax = tax;
-  for (int i = 0; i < MAP_N; i++) {
-    s_map[i] = mapelements[i];
-    s_age[i] = treeage[i];
-  }
-}
-
-void loadGame() {
-  money = s_money; seeds = s_seeds; fruits = s_fruits; hoes = s_hoes;
-  water = s_water; taxtime = s_taxtime; tax = s_tax;
-  for (int i = 0; i < MAP_N; i++) {
-    mapelements[i] = s_map[i];
-    treeage[i] = s_age[i];
-  }
-}
-
-void interact(uint8_t x, uint8_t y) {
+void interact(uint8_t x, uint8_t y)
+{
   uint8_t type = ME(x, y);
-  if (type == SEEDVILLAGER) {
-    if (money >= 3) {
+  if (type == SEEDVILLAGER)
+  {
+    if (money >= 3)
+    {
       seeds++;
       money -= 3;
     }
-  } else if (type == FARMLAND) {
-    if (TA(x, y) == 0) {
-      if (seeds > 0) {
+  }
+  else if (type == FARMLAND)
+  {
+    if (TA(x, y) == 0)
+    {
+      if (seeds > 0)
+      {
         TA(x, y) = 1;
         seeds--;
       }
-    } else if (TA(x, y) == 3) {
+    }
+    else if (TA(x, y) == 3)
+    {
       TA(x, y) = 0;
       fruits += rand(3, 10);
     }
-  } else if (type == FRUITVILLAGER) {
-    if (fruits >= 3) {
+  }
+  else if (type == FRUITVILLAGER)
+  {
+    if (fruits >= 3)
+    {
       money += rand(3, 7);
       fruits -= 3;
     }
-  } else if (type == HOEVILLAGER) {
-    if (money >= 10) {
+  }
+  else if (type == HOEVILLAGER)
+  {
+    if (money >= 10)
+    {
       money -= 10;
       hoes++;
     }
-  } else if (type == WATER) {
-    if (water + money * 1000 > 65535) water = 65535;
-    else water += money * 1000;
+  }
+  else if (type == WATER)
+  {
+    if (water + money * 1000 > 65535)
+      water = 65535;
+    else
+      water += money * 1000;
     money = 0;
-  } else if (type == SAVE) {
+  }
+  else if (type == SAVE)
+  {
     saveGame();
-  } else if (type == LOAD) {
+  }
+  else if (type == LOAD)
+  {
     loadGame();
-  } else if (type == 0) {
-    if (hoes) {
+  }
+  else if (type == 0)
+  {
+    if (hoes)
+    {
       ME(x, y) = FARMLAND;
       hoes--;
     }
   }
 }
 
-void setup() {
+void setup()
+{
   ME(0, 0) = COIN;
   ME(3, 3) = FRUITVILLAGER;
   ME(4, 5) = FARMLAND;
@@ -233,41 +364,61 @@ void setup() {
 
   drawstring("Mapster", 0, 0, 1);
   drawstring("By AzizBgBoss", 0, 18, 1);
+  drawstring("github.com/AzizBgBoss/mapster", 0, 64 - 12, 1);
+  drawstring("github.com/AzizBgBoss/unigames", 0, 64 - 6, 1);
   refreshscreen();
   sleep(1000);
   lasttime = gettime() / 1000;
 }
 
-void loop() {
+void loop()
+{
   keys = getkey();
-  if (acd > 0) acd--;
+  if (acd > 0)
+    acd--;
 
-  if (keys & KEY_UP) {
+  if (keys & KEY_UP)
+  {
     isFacingY = true;
     yOffset++;
-  } else if (keys & KEY_DOWN) {
+  }
+  else if (keys & KEY_DOWN)
+  {
     isFacingY = true;
     yOffset--;
   }
 
-  if (keys & KEY_LEFT) {
+  if (keys & KEY_LEFT)
+  {
     isFacingY = false;
     xOffset++;
-  } else if (keys & KEY_RIGHT) {
+  }
+  else if (keys & KEY_RIGHT)
+  {
     isFacingY = false;
     xOffset--;
   }
 
   // growth tick
-  if ((gettime() / 1000) - lasttime > 1) {
-    for (uint8_t x = 0; x < MAP_W; x++) {
-      for (uint8_t y = 0; y < MAP_H; y++) {
-        if (ME(x, y) == FARMLAND && TA(x, y) > 0 && TA(x, y) < 3) {
-          if (water > 0) {
+  if ((gettime() / 1000) - lasttime > 1)
+  {
+    for (uint8_t x = 0; x < MAP_W; x++)
+    {
+      for (uint8_t y = 0; y < MAP_H; y++)
+      {
+        if (ME(x, y) == FARMLAND && TA(x, y) > 0 && TA(x, y) < 3)
+        {
+          if (water > 0)
+          {
             water--;
-            if (rand(0, 100) == 69) TA(x, y)++;
-          } else if (rand(0, 50) == 21) {
-            TA(x, y)--;
+            if (rand(0, 100) == 69)
+              TA(x, y)
+            ++;
+          }
+          else if (rand(0, 50) == 21)
+          {
+            TA(x, y)
+            --;
           }
         }
       }
@@ -276,103 +427,158 @@ void loop() {
     lasttime = gettime() / 1000;
   }
 
-  if (taxtime < 1) {
+  if (taxtime < 1)
+  {
     taxtime = 200;
-    if (money >= tax) money -= tax;
-    else money = 0;
+    if (money >= tax)
+      money -= tax;
+    else
+      money = 0;
     tax = rand(0, 11);
   }
 
-  if (xOffset > 64) xOffset = 64;
-  else if (xOffset < -80) xOffset = -80;
-  if (yOffset > 32) yOffset = 32;
-  else if (yOffset < -48) yOffset = -48;
+  if (xOffset > 64)
+    xOffset = 64;
+  else if (xOffset < -80)
+    xOffset = -80;
+  if (yOffset > 32)
+    yOffset = 32;
+  else if (yOffset < -48)
+    yOffset = -48;
 
   // ground and player
-  fillRect(xOffset, yOffset, 144, 80, WHITE);
+  fillRect(xOffset + 30 / 2, yOffset, 144, 80, WHITE);
   for (int y = 0; y < 5; y++)
-    for (int x = 0; x < 9; x++) {
-      pixel(x * 16 + xOffset + 3, y * 16 + yOffset + 2, BLACK);
-      pixel(x * 16 + xOffset + 13, y * 16 + yOffset + 7, BLACK);
-      pixel(x * 16 + xOffset + 6, y * 16 + yOffset + 12, BLACK);
+    for (int x = 0; x < 9; x++)
+    {
+      pixel(x * 16 + xOffset + 3 + 30 / 2, y * 16 + yOffset + 2, BLACK);
+      pixel(x * 16 + xOffset + 13 + 30 / 2, y * 16 + yOffset + 7, BLACK);
+      pixel(x * 16 + xOffset + 6 + 30 / 2, y * 16 + yOffset + 12, BLACK);
     }
-  if (isFacingY) drawBitmap(60, 28, mapplayery, 8, 8, BLACK);
-  else drawBitmap(60, 28, mapplayerx, 8, 8, BLACK);
+  if (isFacingY)
+    drawBitmap(128 / 2 + 30 / 2 - 4, 28, mapplayery, 8, 8, BLACK);
+  else
+    drawBitmap(128 / 2 + 30 / 2 - 4, 28, mapplayerx, 8, 8, BLACK);
 
   // tiles
-  for (uint8_t x = 0; x < MAP_W; x++) {
-    for (uint8_t y = 0; y < MAP_H; y++) {
-      int tx = x * 8 + xOffset;
+  for (uint8_t x = 0; x < MAP_W; x++)
+  {
+    for (uint8_t y = 0; y < MAP_H; y++)
+    {
+      int tx = x * 8 + xOffset + 30 / 2;
       int ty = y * 8 + yOffset;
-      if (xOffset <= (x * (-8)) + 64 && xOffset > (x * (-8)) + 57 && yOffset <= (y * (-8)) + 32 && yOffset > (y * (-8)) + 25) {
-        if ((keys & KEY_A) && acd == 0) {
+      if (xOffset <= (x * (-8)) + 64 && xOffset > (x * (-8)) + 57 && yOffset <= (y * (-8)) + 32 && yOffset > (y * (-8)) + 25)
+      {
+        if ((keys & KEY_A) && acd == 0)
+        {
           interact(x, y);
           acd = 12;
         }
-        if (ME(x, y) == COIN) {
+        if (ME(x, y) == COIN)
+        {
           money++;
           ME(x, y) = 0;
         }
       }
-      if (ME(x, y) == 0 || tx < -7 || tx > 127 || ty < -7 || ty > 63) continue;
-      switch (ME(x, y)) {
-        case COIN: drawBitmap(tx, ty, mapcoin, 8, 8, BLACK); break;
-        case SEEDVILLAGER: drawBitmap(tx, ty, mapsvillager, 8, 8, BLACK); break;
-        case FRUITVILLAGER: drawBitmap(tx, ty, mapfvillager, 8, 8, BLACK); break;
-        case HOEVILLAGER: drawBitmap(tx, ty, maphvillager, 8, 8, BLACK); break;
-        case FARMLAND:
-          if (TA(x, y) == 0) drawBitmap(tx, ty, mapfarmland, 8, 8, BLACK);
-          else if (TA(x, y) == 1) drawBitmap(tx, ty, maptree1, 8, 8, BLACK);
-          else if (TA(x, y) == 2) drawBitmap(tx, ty, maptree2, 8, 8, BLACK);
-          else if (TA(x, y) == 3) drawBitmap(tx, ty, maptree3, 8, 8, BLACK);
-          break;
-        case SAVE: drawBitmap(tx, ty, mapsave, 8, 8, BLACK); break;
-        case LOAD: drawBitmap(tx, ty, mapload, 8, 8, BLACK); break;
-        case WATER: drawBitmap(tx, ty, mapwater, 8, 8, BLACK); break;
+      if (ME(x, y) == 0 || tx < -7 || tx > 127 || ty < -7 || ty > 63)
+        continue;
+      switch (ME(x, y))
+      {
+      case COIN:
+        drawBitmap(tx, ty, mapcoin, 8, 8, BLACK);
+        break;
+      case SEEDVILLAGER:
+        drawBitmap(tx, ty, mapsvillager, 8, 8, BLACK);
+        break;
+      case FRUITVILLAGER:
+        drawBitmap(tx, ty, mapfvillager, 8, 8, BLACK);
+        break;
+      case HOEVILLAGER:
+        drawBitmap(tx, ty, maphvillager, 8, 8, BLACK);
+        break;
+      case FARMLAND:
+        if (TA(x, y) == 0)
+          drawBitmap(tx, ty, mapfarmland, 8, 8, BLACK);
+        else if (TA(x, y) == 1)
+          drawBitmap(tx, ty, maptree1, 8, 8, BLACK);
+        else if (TA(x, y) == 2)
+          drawBitmap(tx, ty, maptree2, 8, 8, BLACK);
+        else if (TA(x, y) == 3)
+          drawBitmap(tx, ty, maptree3, 8, 8, BLACK);
+        break;
+      case SAVE:
+        drawBitmap(tx, ty, mapsave, 8, 8, BLACK);
+        break;
+      case LOAD:
+        drawBitmap(tx, ty, mapload, 8, 8, BLACK);
+        break;
+      case WATER:
+        drawBitmap(tx, ty, mapwater, 8, 8, BLACK);
+        break;
       }
     }
   }
 
   // HUD: money, seeds, fruits, hoes, tax, tax timer
-  fillRect(1, 1, 127, 17, BLACK);
-  drawRect(0, 0, 128, 19, WHITE);
-  // glyphs are 4 px wide in this VM: row 1 = $ seeds fruits hoes, row 2 = tax, timer, water
-  drawstring("$", 2, 2, 1);
-  drawNumber(money, 7, 2);
-  drawstring("S", 36, 2, 1);
-  drawNumber(seeds, 41, 2);
-  drawstring("F", 64, 2, 1);
-  drawNumber(fruits, 69, 2);
-  drawstring("H", 92, 2, 1);
-  drawNumber(hoes, 97, 2);
-  drawstring("TAX", 2, 10, 1);
-  drawNumber(tax, 16, 10);
-  drawstring("T", 36, 10, 1);
-  drawNumber(taxtime, 41, 10);
-  drawstring("W", 64, 10, 1);
-  drawNumber(water, 69, 10);
+  fillRect(1, 1, 28, 63, BLACK);
+  drawRect(0, 0, 29, 64, WHITE);
+
+  drawstring("Money", 2, 2, 1);
+  drawNumber(money, 2, 2 + 6 * 1);
+  drawstring("Seeds", 2, 2 + 6 * 2, 1);
+  drawNumber(seeds, 2, 2 + 6 * 3);
+  drawstring("Fruits", 2, 2 + 6 * 4, 1);
+  drawNumber(fruits, 2, 2 + 6 * 5);
+
+  if ((gettime() / 5000) % 2)
+  {
+    drawstring("Hoes", 2, 2 + 6 * 6, 1);
+    drawNumber(hoes, 2, 2 + 6 * 7);
+    drawstring("Tax", 2, 2 + 6 * 8, 1);
+    drawNumber(tax, 2, 2 + 6 * 9);
+  }
+  else
+  {
+    drawstring("Water", 2, 2 + 6 * 6, 1);
+    drawNumber(water, 2, 2 + 6 * 7);
+    drawstring("T Time", 2, 2 + 6 * 8, 1);
+    drawNumber(taxtime, 2, 2 + 6 * 9);
+  }
 
   refreshscreen();
-  sleep(10);
 }
 
-uint32_t main() {
-  if (isflagsupported(FLAG_GRAPHICS, GFX_MONO_128X64)) {
+uint32_t main()
+{
+  if (isflagsupported(FLAG_GRAPHICS, GFX_MONO_128X64))
+  {
     flag(FLAG_GRAPHICS, GFX_MONO_128X64);
-  } else {
+  }
+  else
+  {
     printf("Graphics flag 0 value 6 unsupported\n");
     exit();
   }
 
-  if (isflagsupported(FLAG_KEYBOARD, 1)) {
+  if (isflagsupported(FLAG_KEYBOARD, 1))
+  {
     flag(FLAG_KEYBOARD, 1);
-  } else {
+  }
+  else
+  {
     printf("Keyboard flag 1 unsupported\n");
   }
 
   setup();
-  while (true) {
+  uint64_t starttime = gettime();
+  while (true)
+  {
     loop();
+    while (gettime() - starttime < (1000 / 30))
+    {
+      sleep(1);
+    }
+    starttime = gettime();
   }
   return 0;
 }
