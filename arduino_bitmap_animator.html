@@ -234,6 +234,17 @@ textarea {
   font-size: 13px;
 }
 
+.trk { border-collapse: collapse; font-size: 13px; }
+.trk th, .trk td { padding: 2px 6px; border-bottom: 1px solid #e5e9f0; text-align: left; }
+.trk th { position: sticky; top: 0; background: white; }
+.trk input { width: 56px; padding: 3px; }
+.trk input[type="checkbox"] { width: auto; }
+.trk select { padding: 3px; border: 1px solid #cbd2dc; border-radius: 5px; font: inherit; }
+.trk tr.sel { background: #eff6ff; }
+.trk tr.playing { background: #fef3c7; }
+.trk .pname { display: inline-block; min-width: 34px; font-family: monospace; }
+#sfxTable, #patTable { display: inline-block; max-width: 100%; max-height: 60vh; overflow: auto; }
+
 @media(max-width:600px) {
   body { padding: 0 10px; }
   .panel { padding: 12px; }
@@ -251,6 +262,7 @@ textarea {
   <button class="tab active" data-page="animation">Animation</button>
   <button class="tab" data-page="tiles">Tiles</button>
   <button class="tab" data-page="map">Map</button>
+  <button class="tab" data-page="music">Music</button>
 </div>
 
 <!-- ANIMATION -->
@@ -320,6 +332,7 @@ textarea {
 <div class="toolbar">
   <button id="addTile" class="primary">+ New tile</button>
   <button id="duplicateTile">Duplicate</button>
+  <button id="mergeTiles">Merge identical</button>
   <button id="deleteTile" class="danger">Delete</button>
   <button id="moveTileLeft">← Move left</button>
   <button id="moveTileRight">Move right →</button>
@@ -367,6 +380,7 @@ textarea {
 <p class="hint">Select a tile, then paint directly on the map. Tile previews show the actual bitmap.</p>
 <div id="map-palette"></div>
 <p id="selectedTileInfo" class="hint">Selected: EMPTY (0)</p>
+<button id="mergeTilesMap">Merge identical tiles</button>
 </section>
 
 <section class="panel">
@@ -926,6 +940,40 @@ function moveTile(direction) {
 
 $('moveTileLeft').onclick = () => moveTile(-1);
 $('moveTileRight').onclick = () => moveTile(1);
+
+function mergeIdenticalTiles() {
+  const keep = [0], map = [0];
+
+  for (let i = 1; i < tiles.length; i++) {
+    const same = keep.find(k => k > 0 &&
+      tiles[k].data.every((v, p) => v === tiles[i].data[p]));
+
+    if (same === undefined) {
+      map[i] = keep.length;
+      keep.push(i);
+    } else {
+      map[i] = map[same];
+    }
+  }
+
+  const removed = tiles.length - keep.length;
+  const msg = removed
+    ? `Merged ${removed} identical tile${removed > 1 ? 's' : ''}.`
+    : 'No identical tiles found.';
+
+  if (removed) {
+    tiles = keep.map(k => tiles[k]);
+    remapTiles(v => map[v]);
+    selectedMapTile = map[selectedMapTile] ?? 0;
+    selectTile(map[selectedTile] ?? 0);
+  }
+
+  $('tileStatus').textContent = msg;
+  $('mapStatus').textContent = msg;
+}
+
+$('mergeTiles').onclick = mergeIdenticalTiles;
+$('mergeTilesMap').onclick = mergeIdenticalTiles;
 
 $('setTileSize').onclick = () => {
   const requested = Number($('tileSize').value);
